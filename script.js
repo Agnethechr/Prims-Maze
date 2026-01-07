@@ -3,16 +3,16 @@
 // =========================================
 
 const canvas = document.getElementById("maze");
-const ctx = canvas.getContext("2d");
+const context = canvas.getContext("2d");
 
 const cellSize = 20;
 const rows = canvas.height / cellSize;
 const cols = canvas.width / cellSize;
 
-let grid = [];
-let frontierEdges = [];
+let mazeGrid = [];
+let frontierList = [];
 let isAutoplay = false;
-let speed = 100;
+let generationSpeed = 100;
 
 const cellFillColor = "#64dafe78";
 const wallColor = "#1d00fcff";
@@ -25,7 +25,8 @@ const speedRange = document.getElementById("speedRange");
 // =========================================
 // WEIGHT FUNCTION
 // =========================================
-function getEdgeWeight() {
+
+function getRandomEdgeWeight() {
   return Math.floor(Math.random() * 100) + 1;
 }
 
@@ -41,41 +42,57 @@ class Cell {
     this.walls = { top: true, right: true, bottom: true, left: true };
   }
 
-  draw(ctx, size) {
+  draw(context, size) {
     const x = this.col * size;
     const y = this.row * size;
 
-    if (this.visited) ctx.fillRect(x, y, size, size);
+    if (this.visited) context.fillRect(x, y, size, size);
 
-    ctx.beginPath();
-    if (this.walls.top) ctx.moveTo(x, y), ctx.lineTo(x + size, y);
-    if (this.walls.right) ctx.moveTo(x + size, y), ctx.lineTo(x + size, y + size);
-    if (this.walls.bottom) ctx.moveTo(x, y + size), ctx.lineTo(x + size, y + size);
-    if (this.walls.left) ctx.moveTo(x, y), ctx.lineTo(x, y + size);
-    ctx.stroke();
+    context.beginPath();
+    if (this.walls.top) context.moveTo(x, y), context.lineTo(x + size, y);
+    if (this.walls.right)
+      context.moveTo(x + size, y), context.lineTo(x + size, y + size);
+    if (this.walls.bottom)
+      context.moveTo(x, y + size), context.lineTo(x + size, y + size);
+    if (this.walls.left) context.moveTo(x, y), context.lineTo(x, y + size);
+    context.stroke();
   }
 
-  getUnvisitedNeighbors(grid, rows, cols) {
-    const dirs = [
-      { r: -1, c: 0 },
-      { r: 0, c: 1 },
-      { r: 1, c: 0 },
-      { r: 0, c: -1 },
+  getUnvisitedNeighbors(mazeGrid, rows, cols) {
+    const directions = [
+      { rowOffset: -1, colOffset: 0 },
+      { rowOffset: 0, colOffset: 1 },
+      { rowOffset: 1, colOffset: 0 },
+      { rowOffset: 0, colOffset: -1 },
     ];
 
-    return dirs
-      .map(d => grid[this.row + d.r]?.[this.col + d.c])
-      .filter(n => n && !n.visited);
+    return directions
+      .map(
+        (dir) => mazeGrid[this.row + dir.rowOffset]?.[this.col + dir.colOffset]
+      )
+      .filter((neighbor) => neighbor && !neighbor.visited);
   }
 
-  removeWallBetween(other) {
-    const dx = other.col - this.col;
-    const dy = other.row - this.row;
+  removeWallBetween(neighbor) {
+    const xDirection = neighbor.col - this.col;
+    const yDirection = neighbor.row - this.row;
 
-    if (dx === 1) this.walls.right = other.walls.left = false;
-    if (dx === -1) this.walls.left = other.walls.right = false;
-    if (dy === 1) this.walls.bottom = other.walls.top = false;
-    if (dy === -1) this.walls.top = other.walls.bottom = false;
+    if (xDirection === 1) {
+      this.walls.right = false;
+      neighbor.walls.left = false;
+    }
+    if (xDirection === -1) {
+      this.walls.left = false;
+      neighbor.walls.right = false;
+    }
+    if (yDirection === 1) {
+      this.walls.bottom = false;
+      neighbor.walls.top = false;
+    }
+    if (yDirection === -1) {
+      this.walls.top = false;
+      neighbor.walls.bottom = false;
+    }
   }
 }
 
@@ -83,62 +100,112 @@ class Cell {
 // GRID
 // =========================================
 
-function createGrid() {
-  const g = [];
-  for (let r = 0; r < rows; r++) {
-    g[r] = [];
-    for (let c = 0; c < cols; c++) g[r][c] = new Cell(r, c);
+function createMazeGrid() {
+  const mazeGrid = [];
+
+  for (let row = 0; row < rows; row++) {
+    mazeGrid[row] = [];
+    for (let col = 0; col < cols; col++) {
+      mazeGrid[row][col] = new Cell(row, col);
+    }
   }
-  return g;
+  return mazeGrid;
 }
 
-function drawGrid() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = cellFillColor;
-  ctx.strokeStyle = wallColor;
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++) grid[r][c].draw(ctx, cellSize);
+function drawMaze() {
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = cellFillColor;
+  context.strokeStyle = wallColor;
+
+  for (let row = 0; row < rows; row++)
+    for (let col = 0; col < cols; col++)
+      mazeGrid[row][col].draw(context, cellSize);
 }
 
 // =========================================
-// PRIM MST MAZE
+// PRIMS MAZE
 // =========================================
 
-function startPrims() {
-  const start = grid[Math.floor(Math.random() * rows)][Math.floor(Math.random() * cols)];
-  start.visited = true;
+function startMazeGeneration() {
+  const startCell =
+    mazeGrid[Math.floor(Math.random() * rows)][
+      Math.floor(Math.random() * cols)
+    ];
 
-  start.getUnvisitedNeighbors(grid, rows, cols).forEach(n => {
-    frontierEdges.push({ from: start, to: n, weight: getEdgeWeight() });
+  startCell.visited = true;
+
+  startCell.getUnvisitedNeighbors(mazeGrid, rows, cols).forEach((neighbor) => {
+    frontierList.push({
+      from: startCell,
+      to: neighbor,
+      weight: getRandomEdgeWeight(),
+    });
   });
 
   isAutoplay = true;
-  autoplayPrims();
+  runPrimsAutomatically();
 }
 
-function stepPrims() {
-  if (frontierEdges.length === 0) return isAutoplay = false;
+function generateNextStep() {
+  // If frontier list is empty, initialize a random start cell
+  if (frontierList.length === 0) {
+    const startCell =
+      mazeGrid[Math.floor(Math.random() * rows)][
+        Math.floor(Math.random() * cols)
+      ];
+    startCell.visited = true;
 
-  frontierEdges.sort((a, b) => a.weight - b.weight);
-  const edge = frontierEdges.shift();
+    startCell.getUnvisitedNeighbors(mazeGrid, rows, cols).forEach((neighbor) => {
+      frontierList.push({
+        from: startCell,
+        to: neighbor,
+        weight: getRandomEdgeWeight(),
+      });
+    });
 
-  const { from, to } = edge;
-  if (to.visited) return;
+    drawMaze();
+    return;
+  }
 
+  // Sort edges by weight (Prim's logic)
+  frontierList.sort((lighterEdge, heavierEdge) => lighterEdge.weight - heavierEdge.weight);
+
+  let edge;
+  let to;
+
+  // Loop until we find an unvisited 'to' cell
+  while (frontierList.length > 0) {
+    edge = frontierList.shift();
+    to = edge.to;
+    if (!to.visited) break;
+  }
+
+  // If all remaining edges lead to visited cells, stop
+  if (!to || to.visited) return;
+
+  const from = edge.from;
+
+  // Remove wall and mark the cell as visited
   from.removeWallBetween(to);
   to.visited = true;
 
-  to.getUnvisitedNeighbors(grid, rows, cols).forEach(n => {
-    frontierEdges.push({ from: to, to: n, weight: getEdgeWeight() });
+  // Add neighbors of the new cell to the frontier
+  to.getUnvisitedNeighbors(mazeGrid, rows, cols).forEach((neighbor) => {
+    frontierList.push({
+      from: to,
+      to: neighbor,
+      weight: getRandomEdgeWeight(),
+    });
   });
 
-  drawGrid();
+  // Draw the updated maze so the new cell is visible
+  drawMaze();
 }
 
-function autoplayPrims() {
+function runPrimsAutomatically() {
   if (!isAutoplay) return;
-  stepPrims();
-  setTimeout(autoplayPrims, 101 - speed);
+  generateNextStep();
+  setTimeout(runPrimsAutomatically, 101 - generationSpeed);
 }
 
 // =========================================
@@ -147,9 +214,9 @@ function autoplayPrims() {
 
 function resetMaze() {
   isAutoplay = false;
-  frontierEdges = [];
-  grid = createGrid();
-  drawGrid();
+  frontierList = [];
+  mazeGrid = createMazeGrid();
+  drawMaze();
 }
 
 // =========================================
@@ -157,12 +224,12 @@ function resetMaze() {
 // =========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  grid = createGrid();
-  drawGrid();
+  mazeGrid = createMazeGrid();
+  drawMaze();
 
-  startBtn.onclick = startPrims;
-  stepBtn.onclick = stepPrims;
+  startBtn.onclick = startMazeGeneration;
+  stepBtn.onclick = generateNextStep;
   resetBtn.onclick = resetMaze;
 
-  speedRange.oninput = e => speed = parseInt(e.target.value);
+  speedRange.oninput = (e) => (generationSpeed = parseInt(e.target.value));
 });
