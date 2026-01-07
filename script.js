@@ -1,7 +1,4 @@
-// =========================================
 // GLOBAL VARIABLES
-// =========================================
-
 const canvas = document.getElementById("maze");
 const context = canvas.getContext("2d");
 
@@ -22,18 +19,13 @@ const stepBtn = document.getElementById("stepBtn");
 const resetBtn = document.getElementById("resetBtn");
 const speedRange = document.getElementById("speedRange");
 
-// =========================================
-// WEIGHT FUNCTION
-// =========================================
 
+// WEIGHT FUNCTION
 function getRandomEdgeWeight() {
   return Math.floor(Math.random() * 100) + 1;
 }
 
-// =========================================
 // CELL CLASS
-// =========================================
-
 class Cell {
   constructor(row, col) {
     this.row = row;
@@ -58,7 +50,7 @@ class Cell {
     context.stroke();
   }
 
-  getUnvisitedNeighbors(mazeGrid, rows, cols) {
+  getUnvisitedNeighbors(mazeGrid) {
     const directions = [
       { rowOffset: -1, colOffset: 0 },
       { rowOffset: 0, colOffset: 1 },
@@ -77,29 +69,26 @@ class Cell {
     const xDirection = neighbor.col - this.col;
     const yDirection = neighbor.row - this.row;
 
-    if (xDirection === 1) {
+    if (xDirection === 1) { //Højre
       this.walls.right = false;
       neighbor.walls.left = false;
     }
-    if (xDirection === -1) {
+    if (xDirection === -1) { //Venstre
       this.walls.left = false;
       neighbor.walls.right = false;
     }
-    if (yDirection === 1) {
+    if (yDirection === 1) { //Nedenfor
       this.walls.bottom = false;
       neighbor.walls.top = false;
     }
-    if (yDirection === -1) {
+    if (yDirection === -1) { //Ovenfor
       this.walls.top = false;
       neighbor.walls.bottom = false;
     }
   }
 }
 
-// =========================================
 // GRID
-// =========================================
-
 function createMazeGrid() {
   const mazeGrid = [];
 
@@ -122,10 +111,8 @@ function drawMaze() {
       mazeGrid[row][col].draw(context, cellSize);
 }
 
-// =========================================
-// PRIMS MAZE
-// =========================================
 
+// PRIMS MAZE
 function startMazeGeneration() {
   const startCell =
     mazeGrid[Math.floor(Math.random() * rows)][
@@ -146,6 +133,7 @@ function startMazeGeneration() {
   runPrimsAutomatically();
 }
 
+// STEP
 function generateNextStep() {
   // If frontier list is empty, initialize a random start cell
   if (frontierList.length === 0) {
@@ -155,41 +143,40 @@ function generateNextStep() {
       ];
     startCell.visited = true;
 
-    startCell.getUnvisitedNeighbors(mazeGrid, rows, cols).forEach((neighbor) => {
-      frontierList.push({
-        from: startCell,
-        to: neighbor,
-        weight: getRandomEdgeWeight(),
+    startCell
+      .getUnvisitedNeighbors(mazeGrid, rows, cols)
+      .forEach((neighbor) => {
+        frontierList.push({
+          from: startCell,
+          to: neighbor,
+          weight: getRandomEdgeWeight(),
+        });
       });
-    });
 
     drawMaze();
     return;
   }
 
-  // Sort edges by weight (Prim's logic)
-  frontierList.sort((lighterEdge, heavierEdge) => lighterEdge.weight - heavierEdge.weight);
+  frontierList.sort(
+    (lighterEdge, heavierEdge) => lighterEdge.weight - heavierEdge.weight
+  );
 
   let edge;
   let to;
 
-  // Loop until we find an unvisited 'to' cell
   while (frontierList.length > 0) {
     edge = frontierList.shift();
     to = edge.to;
     if (!to.visited) break;
   }
 
-  // If all remaining edges lead to visited cells, stop
   if (!to || to.visited) return;
 
   const from = edge.from;
 
-  // Remove wall and mark the cell as visited
   from.removeWallBetween(to);
   to.visited = true;
 
-  // Add neighbors of the new cell to the frontier
   to.getUnvisitedNeighbors(mazeGrid, rows, cols).forEach((neighbor) => {
     frontierList.push({
       from: to,
@@ -198,7 +185,6 @@ function generateNextStep() {
     });
   });
 
-  // Draw the updated maze so the new cell is visible
   drawMaze();
 }
 
@@ -208,10 +194,7 @@ function runPrimsAutomatically() {
   setTimeout(runPrimsAutomatically, 101 - generationSpeed);
 }
 
-// =========================================
 // RESET
-// =========================================
-
 function resetMaze() {
   isAutoplay = false;
   frontierList = [];
@@ -219,10 +202,7 @@ function resetMaze() {
   drawMaze();
 }
 
-// =========================================
 // EVENTS
-// =========================================
-
 document.addEventListener("DOMContentLoaded", () => {
   mazeGrid = createMazeGrid();
   drawMaze();
