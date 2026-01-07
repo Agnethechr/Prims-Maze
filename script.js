@@ -52,10 +52,10 @@ class Cell {
 
   getUnvisitedNeighbors(mazeGrid) {
     const directions = [
-      { rowOffset: -1, colOffset: 0 },
-      { rowOffset: 0, colOffset: 1 },
-      { rowOffset: 1, colOffset: 0 },
-      { rowOffset: 0, colOffset: -1 },
+      { rowOffset: -1, colOffset: 0 }, //højre
+      { rowOffset: 0, colOffset: 1 }, //venstre
+      { rowOffset: 1, colOffset: 0 }, //nedenfor
+      { rowOffset: 0, colOffset: -1 }, //ovenfor
     ];
 
     return directions
