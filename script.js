@@ -52,10 +52,10 @@ class Cell {
 
   getUnvisitedNeighbors(mazeGrid) {
     const directions = [
-      { rowOffset: -1, colOffset: 0 }, //højre
-      { rowOffset: 0, colOffset: 1 }, //venstre
-      { rowOffset: 1, colOffset: 0 }, //nedenfor
-      { rowOffset: 0, colOffset: -1 }, //ovenfor
+      { rowOffset: -1, colOffset: 0 }, //Højre
+      { rowOffset: 0, colOffset: 1 }, //Venstre
+      { rowOffset: 1, colOffset: 0 }, //Nedenfor
+      { rowOffset: 0, colOffset: -1 }, //Ovenfor
     ];
 
     return directions
@@ -135,7 +135,6 @@ function startMazeGeneration() {
 
 // STEP
 function generateNextStep() {
-  // If frontier list is empty, initialize a random start cell
   if (frontierList.length === 0) {
     const startCell =
       mazeGrid[Math.floor(Math.random() * rows)][
